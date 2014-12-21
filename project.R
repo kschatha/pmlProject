@@ -14,8 +14,8 @@ training <- read.csv(url(trainUrl), na.strings=c("NA","#DIV/0!",""))
 testing <- read.csv(url(testUrl), na.strings=c("NA","#DIV/0!",""))
 dim(training);dim(testing)
 
-#Size of the training data = 19622 X 160
-#Size of the testing data = 20 X 160
+#Size of the training data = 19622x160
+#Size of the testing data = 20x160
 #last column of training is the response variable called "classe"
 #last column of testing is the "problem_id"
 
@@ -39,7 +39,7 @@ training <- Ntraining
 training <- training[,-c(1,2,5)]
 dim(training)
 
-#Size of the final training data - 19622 X 56
+#Size of the final training data - 19622x56
 
 #Partition the training data into training and testing subsets for the purpose of
 #cross-validation - 70% in training and 30% in testing.
@@ -52,15 +52,15 @@ dim(trainSub);dim(testSub)
 dt_model <- rpart( classe ~ ., data=trainSub, method="class")
 summary(dt_model)
 #plot the decision tree
-fancyRpartPlot( dt_model)
+fancyRpartPlot( dt_model, main="Classification using Decision Tree")
 
 #Predicting on the cross-validation test set
 dt_prediction <- predict( dt_model, testSub, type="class")
 #confusion matrix
 confusionMatrix( dt_prediction, testSub$classe)
 
-#The out-of-sample error using Decision Tree is = 0.1862 and 
-#the accuracy is = 0.8138. 
+#The out-of-sample error using Decision Tree is = 0.176 and 
+#the accuracy is = 0.824. 
 
 #We will use random forest now to see if the accuracy of the model can be improved.
 
@@ -73,8 +73,8 @@ rf_prediction <- predict( rf_model, testSub, type="class")
 #confusion matrix
 confusionMatrix( rf_prediction, testSub$classe)
 
-#The out-of-sample error using Random Forest is =  and 
-#the accurayc is = 0.9986
+#The out-of-sample error using Random Forest is = 0.0015 and 
+#the accurayc is = 0.9985
 
 #Random Forest gives higher accuracy and better results as expected.
 
