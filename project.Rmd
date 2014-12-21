@@ -1,0 +1,182 @@
+###Practical Machine Learning Course Project
+Kriti Singh  
+December 20, 2014  
+
+This is a compiled analysis of a course project done for the Practical Machine Learning class at John Hopkins University.  
+The scripts have been solely produced and tested on Mac Os X Yosemite 10.10.1 and RStudio version 0.98.1062. 
+
+github repo - [https://github.com/kschatha/pmlProject](https://github.com/kschatha/pmlProject)
+
+###*Background of the Project*
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely "quantify how well they do it". In this project, the goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website [here: http://groupware.les.inf.puc-rio.br/har](here: http://groupware.les.inf.puc-rio.br/har) (see the section on the Weight Lifting Exercise Dataset). 
+
+###*Data*
+The training data for this project is available below. It is made into a data frame of size - 19622x160. 
+
+[https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+
+The test data is available below. It is made into a data frame of size - 20x160.
+
+[https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+
+The data for this project come from this source: [http://groupware.les.inf.puc-rio.br/har](http://groupware.les.inf.puc-rio.br/har). 
+
+###*Submission Guidelines*
+The goal of this project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases. 
+
+1. Your submission should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. 
+2. You should also apply your machine learning algorithm to the 20 test cases available in the test data above. Please submit your predictions in appropriate format to the programming assignment for automated grading. 
+
+###*Reprodueability*
+For the purpose of reproducing the same results as shown in the analysis, a pseudo-random number generator seed was set at 12345.  
+Various R packages like "caret", "random forest", "rpart" are used in this project. These should be installed and loaded to reproduce the results.  
+
+###*How the model is built*
+The response variable is "classe" which quantifies how well a particular exercise in this case "Unilateral Dumbbell Biceps Curl" is perfomed by an individual. This is a factor variable and here are the 5 different levels -   
+**Class A** = Exactly according to the specification  
+**Class B** = Throwing the elbows to the front  
+**Class C** = Lifting the dumbBell only half-way  
+**Class D** = Lowering the dumbBell only half-way  
+**Class E** = Throwing the hips to the front  
+Class A corresponds to the specified execution of the exercise, while the other 4 classes correspond to common mistakes. The exercises were performed by six male participants aged between 20-28 years, with little weight lifting experience.  
+
+This is a Classification problem and two models namely Decision Tree and Random Forest are tested here. Predictions are made using the model that gives the highest accuracy and lowest estimate of out-of-sample error which in this case is  **Random Forest** with accuracy of **99.85%** and out of sample error estimate of **0.15%**.  
+
+###*Cross-Validation*
+For the purpose of computing the out-of-sample error, cross-validation is perfomed here. The training data is partitoned into 2 subsets. 70% is used for model fitting and the rest 30% is used to predicting and computing out of accuracy and out of sample error.
+
+###*Expected out-of-sample error*
+The expected out-of-sample error is computed using cross-validation.The formulation used is **1-accuracy** where accuracy in case of a classification problem like this is given by *correctly classified samples / total samples*. This out-of-sample estimate computed using cross-validation will give a fair idea of the real error rate on the original test set of 20x160 size which can't be calculated given that the test data has no "classe" variable.
+
+###*Reasons for the choices I made*
+The problem of predicting the "classe" response variable in the given the dataset is a classic example of supervised classification problem. We have a big training set of size 19622x160. We start with some pre-processing of the data. From the initial investigation of the data we can see there are a lot of variables with large number of missing values. As this will only slow down the model fitting process we start with removing such variables. 
+
+Next, we compute the **Near Zero Variance** variables and these are the variables which remain constant or almost constant across samples and are not useful for discriminating among different classes so we remove those as well during pre-processing/cleaning of the data.
+
+Once the pre-processing is done, we split the data set 70-30 into training and testing subsets. we try various model like decision tree and random forest because of the following reasons -  
+* Random Forest produce one of the most accurate learning algorithm and highly accurate classifier.  
+* It gives estimates of what variables are important in classification. 
+
+Finally the model with maximum accuracy and smallest out-of-sample error estimate is selected as the final model. This final model is then run on the original test set of size 20x160 and the predictions are made.
+
+###*Code and Inferences * 
+###Load the packages and libraries
+Install and load the packages required and also set a seed to reproduce the same resuls.
+
+```{r}
+#Install the packages using "install.packages(packagename)"
+#Load the required packages
+library(caret);library(randomForest)
+library(rpart);library(rpart.plot)
+library(rattle);library(RColorBrewer)
+
+#set the seed to reproduce the same results
+set.seed(12345)
+```
+
+###Loading the training and testing data
+```{r}
+trainUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+training <- read.csv(url(trainUrl), na.strings=c("NA","#DIV/0!",""))
+testing <- read.csv(url(testUrl), na.strings=c("NA","#DIV/0!",""))
+dim(training);dim(testing)
+```
+
+###Pre-processing the training data
+Cleaning the data - find the near zero variance variables and removing them 
+as they are not useful in discriminating among different classes.
+```{r}
+nzv <- nearZeroVar(training)
+NZVtraining <- training[, -nzv]
+dim(NZVtraining)
+training <- NZVtraining
+```
+
+Cleaning the data - removing the variables with large number of missing values as they only slow down the model fitting procedure.
+```{r}
+#variables with col sums > 0 have missing values.
+Ntraining <- training[,colSums(is.na(training)) == 0]
+#new dimensions
+dim(Ntraining)
+training <- Ntraining
+```
+
+Clean the data - some other variables can be removed which seems not so relevant like "X", "user_name", "cvtd_timestamp" 
+```{r}
+training <- training[,-c(1,2,5)]
+dim(training)
+```
+
+###Partition the training data
+Partitioning the training data into training and testing subsets for the purpose of cross-validation - 70% in training and 30% in testing.
+```{r}
+inTrain <- createDataPartition( y=training$classe, p=0.7, list=FALSE)
+trainSub <- training[inTrain,]
+testSub <- training[-inTrain,]
+dim(trainSub);dim(testSub)
+```
+
+###Fitting a Decision Tree model to the training sub-set
+```{r}
+dt_model <- rpart( classe ~ ., data=trainSub, method="class")
+#summary(dt_model)
+#plot the decision tree
+fancyRpartPlot( dt_model)
+```
+
+###Predicting on the testing subset and computing confusion matric
+```{r}
+dt_prediction <- predict( dt_model, testSub, type="class")
+#confusion matrix
+confusionMatrix( dt_prediction, testSub$classe)
+```
+
+*The out-of-sample error using Decision Tree is = 0.176 or 17.6% and the accuracy is = 0.824 or 82.4%*
+
+Next, we will model using *Random Forest* to see if the accuracy of the model can be improved.
+
+```{r}
+rf_model <- randomForest( classe ~ ., data=trainSub)
+#summary(rf_model)
+```
+
+###Predicting on the testing subset and computing confusion matric
+```{r}
+rf_prediction <- predict( rf_model, testSub, type="class")
+#confusion matrix
+confusionMatrix( rf_prediction, testSub$classe)
+```
+
+*The out-of-sample error using Random Forest is = 0.0015 or 0.15% and the accuracy is = 0.9985 or 99.85%*
+
+*Random Forest gives higher accuracy and better results as expected*
+
+###Preddicting on the Orignal TestSet 20x160 size 
+```{r}
+prediction <- predict( rf_model, testing, type="class")
+prediction
+```
+
+###Submissons for course project.
+Generating the files for the purpose of submission.
+```
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(prediction)
+```
+
+###References
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+
+Read more: http://groupware.les.inf.puc-rio.br/har#weight_lifting_exercises#ixzz3MTooxlKl
+
+
+
